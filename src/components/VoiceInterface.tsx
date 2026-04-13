@@ -118,8 +118,8 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
       const hour = now.getHours();
       const minute = now.getMinutes();
       
-      // Sleep starts at 22:15 and ends at 10:00 AM
-      const isSleeping = (hour > 22 || (hour === 22 && minute >= 15)) || (hour < 10);
+      // Sleep starts at 23:20 and ends at 10:00 AM
+      const isSleeping = (hour > 23 || (hour === 23 && minute >= 20)) || (hour < 10);
       setIsNight(isSleeping);
     };
     checkTime();

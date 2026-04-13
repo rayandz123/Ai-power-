@@ -120,8 +120,8 @@ export function LandingPage({ onStart, onInstall }: LandingPageProps) {
               onClick={onStart}
               className="group flex items-center gap-3 text-white/40 hover:text-white transition-all text-lg font-bold"
             >
-              <span>أو الدخول مباشرة للتطبيق</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span>أو الدخول مباشرة للتطبيق</span>
             </button>
           </motion.div>
         </div>
@@ -226,6 +226,7 @@ export function LandingPage({ onStart, onInstall }: LandingPageProps) {
           </div>
           <p className="text-white/30 text-sm mb-4">© 2026 Ai Chat Power - Developed by ai power</p>
           <div className="flex space-x-6 text-white/20 text-xs uppercase tracking-widest font-bold">
+            <a href="https://github.com/rayanrami8884/AI-CHAT-POWER" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
             <a href="#" className="hover:text-white transition-colors">Privacy</a>
             <a href="#" className="hover:text-white transition-colors">Terms</a>
             <a href="#" className="hover:text-white transition-colors">Contact</a>
