@@ -1,11 +1,40 @@
-<div align="center">
+# AI CHAT POWER
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+تطبيق محادثة ذكي متطور يدعم المحادثة الصوتية والكتابية بجميع اللغات واللهجات، مع واجهة مستخدم عصرية وتفاعلية.
 
-  <h1>Built with AI Studio</h2>
+## المميزات
+- **محادثة صوتية فورية:** أفاتار ذكي يتفاعل مع صوتك بتعبيرات وجهية.
+- **دعم جميع اللغات:** يتقن جميع لغات العالم واللهجات العربية (بما فيها الدارجة الجزائرية).
+- **سرعة فائقة:** ردود موجزة وسريعة البرق.
+- **واجهة عصرية:** تصميم متوهج وأنيق مع اسم تطبيق مشع.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## متطلبات التشغيل
+- [Node.js](https://nodejs.org/) (إصدار 18 أو أحدث)
+- مفتاح API من [Google AI Studio](https://aistudio.google.com/)
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## طريقة التشغيل محلياً
 
-</div>
+1. **تحميل الكود:** قم بتحميل المشروع كملف ZIP أو عمل Clone للمستودع.
+2. **تثبيت المكتبات:**
+   ```bash
+   npm install
+   ```
+3. **إعداد مفتاح API:**
+   - قم بإنشاء ملف باسم `.env` في المجلد الرئيسي للمشروع.
+   - أضف مفتاح API الخاص بك كالتالي:
+     ```env
+     GEMINI_API_KEY=your_api_key_here
+     ```
+4. **تشغيل التطبيق:**
+   ```bash
+   npm run dev
+   ```
+5. **فتح التطبيق:** افتح المتصفح وانتقل إلى الرابط `http://localhost:3000`.
+
+## التطوير
+تم بناء هذا التطبيق باستخدام:
+- React 19
+- Vite
+- Tailwind CSS
+- Framer Motion
+- Google Gemini API (GenAI SDK)
