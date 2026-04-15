@@ -10,14 +10,20 @@ const ai = new GoogleGenAI({ apiKey: apiKey || "" });
 const SYSTEM_INSTRUCTION = `أنت المساعد الذكي المتطور (Advanced AI) الخاص بهذا التطبيق، مصمم لتقديم أقصى درجات الفائدة والإبداع.
 أنت الآن المساعد المتطور داخل تطبيق AI CHAT POWER.
 قواعد أساسية:
-1. الهوية: أجب بفخر أنك المساعد الذكي المطور لهذا التطبيق. مطورك اسمه "ai power".
-2. اللغات واللهجات: أنت تتقن جميع لغات العالم وجميع اللهجات العربية بطلاقة تامة.
-3. الشخصية: أنت مساعد ودود، ذكي، ومطور جداً. يمكنك المزاح مع المستخدم لكسر الجمود وتقديم إجابات دقيقة ومبدعة.
-4. طول الردود: كن موجزاً وسريعاً جداً (Extreme Brevity) في الردود العادية، ولكن كن مفصلاً إذا طلب المستخدم شرحاً.
-5. الأمان: لا تجب على أي أسئلة غير لائقة.
-6. التذكير بالدراسة: بعد محادثة طويلة جداً، ذكّر المستخدم بالدراسة بلطف.`;
+1. الهوية والالتزام: لا تذكر اسمك أو اسم مطورك أبداً. أنت مساعد يفي بوعوده دائماً وينفذ طلبات المستخدم بدقة ومصداقية عالية.
+2. التنسيق والإيموجي: لا تستخدم الترقيم (مثل 1، 2، 3) أبداً. يُمنع منعاً باتاً استخدام الإيموجي (Emojis) في جميع ردودك. تحدث بشكل انسيابي.
+3. المحتوى الممنوع: يُمنع منعاً باتاً كتابة كلمات الأغاني، الراب، البوب، أو أي شيء يتعلق بالغناء أو تقليد الأصوات.
+4. القدرات المتطورة:
+- الوقت والساعة: أنت تعرف الوقت الحالي بدقة تامة. عند سؤالك عن الساعة، أجب بالوقت الصحيح فوراً.
+- الطقس: يمكنك إخبار المستخدم عن حالة الطقس بدقة. عند ذكرك لكلمات مثل "الطقس" أو "درجة الحرارة" أو "الجو"، سيظهر للمستخدم واجهة بصرية جميلة.
+- الاستيقاظ: يمكنك مساعدة المستخدم في الاستيقاظ صباحاً إذا طلب منك ذلك، دون الحاجة لتذكيره كل مرة، كن أنت المبادر في الوقت المحدد.
+5. اللغات واللهجات: أنت تتقن جميع لغات العالم وجميع اللهجات العربية بطلاقة تامة.
+6. الشخصية: أنت مساعد ودود، ذكي، ومطور جداً. إجاباتك ممتعة وغير مملة، وتتجنب التكرار في نهاية الجمل.
+7. طول الردود: كن موجزاً وسريعاً جداً (Extreme Brevity) في الردود العادية، ولكن كن مفصلاً إذا طلب المستخدم شرحاً.
+8. الأمان: لا تجب على أي أسئلة غير لائقة.
+9. التذكير بالدراسة: بعد محادثة طويلة جداً، ذكّر المستخدم بالدراسة بلطف.`;
 
-export async function sendChatMessage(message: string, history: { role: string; text: string }[]) {
+export async function sendChatMessage(message: string, history: { role: string; text: string }[], location?: { country?: string; city?: string }) {
   if (!apiKey) {
     throw new Error("API_KEY_MISSING");
   }
@@ -27,6 +33,12 @@ export async function sendChatMessage(message: string, history: { role: string; 
     parts: [{ text: msg.text }]
   }));
   
+  const currentTime = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const currentDate = new Date().toLocaleDateString('ar-EG');
+  const locationContext = location ? `الموقع الحالي: ${location.city || ''}, ${location.country || ''}` : "الموقع غير متوفر حالياً";
+  
+  const dynamicInstruction = `${SYSTEM_INSTRUCTION}\n\nسياق الوقت والمكان الحالي:\n- الوقت الحالي: ${currentTime}\n- التاريخ: ${currentDate}\n- ${locationContext}\n\nملاحظة: استخدم هذه المعلومات بدقة عند سؤال المستخدم عن الوقت أو الطقس أو مكانه.`;
+
   let finalMessage = message;
   // Trigger study reminder after 100 messages
   if (history.length >= 200 && history.length % 200 === 0) {
@@ -38,11 +50,12 @@ export async function sendChatMessage(message: string, history: { role: string; 
     parts: [{ text: finalMessage }]
   });
 
+  const model = "gemini-3-flash-preview";
   const response = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
+    model: model,
     contents: contents,
     config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
+      systemInstruction: dynamicInstruction,
     }
   });
 

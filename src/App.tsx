@@ -5,10 +5,13 @@ import { MessageSquare, Mic, Download, X, ArrowLeft, Smartphone, Tv, Monitor, Sp
 import { ChatInterface } from "./components/ChatInterface";
 import { VoiceInterface } from "./components/VoiceInterface";
 import { LandingPage } from "./components/LandingPage";
+import { useLiveAPI } from "./lib/useLiveAPI";
 
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
+  const liveAPI = useLiveAPI();
+  const { disconnect } = liveAPI;
   const [mode, setMode] = useState<"text" | "voice">("text");
   const [isInitializing, setIsInitializing] = useState(true);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -58,9 +61,16 @@ function AppContent() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  useEffect(() => {
+    // Global cleanup: if we are on landing page, ensure everything is off
+    if (location.pathname === "/") {
+      disconnect();
+    }
+  }, [location.pathname, disconnect]);
+
   const handleInstall = async () => {
     if (!deferredPrompt) {
-      alert("يرجى استخدام متصفح Chrome أو Safari لتثبيت التطبيق مباشرة.");
+      alert("جاري تجهيز ملف APK للتحميل... يرجى التأكد من استخدام متصفح Chrome أو Safari والضغط على 'إضافة إلى الشاشة الرئيسية' إذا لم يبدأ التحميل تلقائياً.");
       return;
     }
     deferredPrompt.prompt();
@@ -163,20 +173,10 @@ function AppContent() {
             )}
           </AnimatePresence>
 
-          {/* Header */}
-          <header className="w-full pt-4 pb-2 px-6 flex flex-col items-center justify-center relative z-10">
-            {/* Device Indicator - Moved to top-left corner */}
-            <div className="absolute left-6 top-6">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white/30 backdrop-blur-md">
-                {deviceType === "tv" && <Tv className="w-4 h-4 text-rose-500/50" />}
-                {deviceType === "mobile" && <Smartphone className="w-4 h-4 text-cyan-500/50" />}
-                {deviceType === "desktop" && <Monitor className="w-4 h-4 text-indigo-500/50" />}
-                <span className="text-[8px] font-black uppercase tracking-widest hidden sm:block">{deviceType}</span>
-              </div>
-            </div>
-
-            {/* Mode Toggle */}
-            <div className="w-full max-w-[280px] bg-white/5 backdrop-blur-3xl p-1 rounded-[2rem] flex border border-white/10 relative z-20 shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
+          {/* Header - Fixed and Untouchable background */}
+          <header className="fixed top-0 left-0 right-0 pt-4 pb-4 px-6 flex flex-col items-center justify-center z-[200] bg-gradient-to-b from-[#050507] via-[#050507]/95 to-transparent backdrop-blur-sm pointer-events-none">
+            {/* Mode Toggle - Interactive */}
+            <div className="w-full max-w-[280px] bg-white/5 backdrop-blur-3xl p-1 rounded-[2rem] flex border border-white/10 relative z-20 shadow-[0_8px_30px_rgba(0,0,0,0.3)] pointer-events-auto">
               <button 
                 onClick={() => setMode("text")}
                 className={`flex-1 flex items-center justify-center py-2.5 rounded-[1.5rem] transition-all duration-500 ${mode === "text" ? "bg-white/10 text-white shadow-lg font-bold" : "text-white/20 hover:text-white/40"}`}
@@ -195,7 +195,7 @@ function AppContent() {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 relative w-full h-full overflow-hidden z-10">
+          <main className="flex-1 relative w-full h-full overflow-hidden z-10 pt-20">
             <AnimatePresence mode="wait">
               {mode === "text" ? (
                 <motion.div
@@ -206,7 +206,11 @@ function AppContent() {
                   transition={{ duration: 0.4, ease: "easeOut" }}
                   className="absolute inset-0"
                 >
-                  <ChatInterface onSwitchToVoice={() => setMode("voice")} onBack={() => {}} />
+                  <ChatInterface 
+                    onSwitchToVoice={() => setMode("voice")} 
+                    onBack={() => navigate("/")} 
+                    liveAPI={liveAPI}
+                  />
                 </motion.div>
               ) : (
                 <motion.div
@@ -217,7 +221,11 @@ function AppContent() {
                   transition={{ duration: 0.4, ease: "easeOut" }}
                   className="absolute inset-0"
                 >
-                  <VoiceInterface onBack={() => setMode("text")} deviceType={deviceType} />
+                  <VoiceInterface 
+                    onBack={() => setMode("text")} 
+                    deviceType={deviceType} 
+                    liveAPI={liveAPI}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

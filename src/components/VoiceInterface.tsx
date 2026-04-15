@@ -3,6 +3,7 @@ import { Mic, MicOff, Settings2, ArrowLeft, Info, User } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useLiveAPI } from "../lib/useLiveAPI";
 import { cn } from "../lib/utils";
+import { WeatherWidget } from "./WeatherWidget";
 
 const MOODS = [
   { id: "Zephyr", label: "Voice Alpha" },
@@ -14,37 +15,42 @@ const MOODS = [
 interface VoiceInterfaceProps {
   onBack: () => void;
   deviceType?: "mobile" | "tv" | "desktop";
+  liveAPI: any;
 }
 
-export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfaceProps) {
-  const { isConnected, isSpeaking, volume, connect, disconnect, toggleMute, isMuted, voice, error } = useLiveAPI();
+export function VoiceInterface({ onBack, deviceType = "desktop", liveAPI }: VoiceInterfaceProps) {
+  const { 
+    isConnected, isSpeaking, volume, connect, disconnect, toggleMute, isMuted, voice, error, 
+    weatherData, setWeatherData, gestureType, setGestureType, handStyle, setHandStyle 
+  } = liveAPI;
   const [showSettings, setShowSettings] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState("Zephyr");
-  const [gestureType, setGestureType] = useState<"none" | "talking" | "singing" | "explaining">("none");
   const [avatarState, setAvatarState] = useState<"face" | "circle">("face");
   const startButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Alternate between face and glowing circle every 10 seconds if connected
-    if (isConnected) {
-      const interval = setInterval(() => {
-        setAvatarState(prev => prev === "face" ? "circle" : "face");
-      }, 10000);
-      return () => clearInterval(interval);
-    } else {
-      setAvatarState("face");
-    }
+    // Avatar is always face now, removed circle alternation
+    setAvatarState("face");
   }, [isConnected]);
 
   useEffect(() => {
     if (isSpeaking) {
-      // Determine gesture type based on volume and randomness
+      // Determine gesture type and hand style based on volume and randomness
       const timer = setInterval(() => {
         const rand = Math.random();
-        if (volume > 0.6) setGestureType("singing");
-        else if (rand > 0.7) setGestureType("explaining");
+        
+        // Cycle hand styles
+        if (rand > 0.8) setHandStyle(prev => prev === "robotic" ? "holographic" : prev === "holographic" ? "plasma" : "robotic");
+
+        // Determine gesture
+        if (volume > 0.7) setGestureType("singing");
+        else if (rand > 0.9) setGestureType("heart");
+        else if (rand > 0.8) setGestureType("star");
+        else if (rand > 0.7) setGestureType("square");
+        else if (rand > 0.6) setGestureType("circle");
+        else if (rand > 0.4) setGestureType("explaining");
         else setGestureType("talking");
-      }, 2000);
+      }, 2500);
       return () => clearInterval(timer);
     } else {
       setGestureType("none");
@@ -57,6 +63,13 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
       startButtonRef.current?.focus();
     }
   }, [isConnected, showSettings]);
+
+  useEffect(() => {
+    // Cleanup on unmount: turn off mic and avatar
+    return () => {
+      disconnect();
+    };
+  }, [disconnect]);
 
   useEffect(() => {
     // Removed first-time prompt logic as requested
@@ -84,9 +97,8 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
         // Wake words: "ليو", "يا ليو", "leo"
         if (transcript.includes('ليو') || transcript.includes('leo')) {
           if (!isConnected) {
-            playStartSound();
             connect(selectedVoice);
-            recognitionRef.current.stop();
+            if (recognitionRef.current) recognitionRef.current.stop();
           }
         }
       };
@@ -128,31 +140,49 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
   }, []);
 
   const playStartSound = () => {
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    const playTone = (freq: number, start: number, duration: number) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+    try {
+      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
       
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + start + duration);
+      const audioCtx = new AudioContextClass();
       
-      gain.gain.setValueAtTime(0, audioCtx.currentTime + start);
-      gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + start + 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + start + duration);
-      
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      
-      osc.start(audioCtx.currentTime + start);
-      osc.stop(audioCtx.currentTime + start + duration);
-    };
+      const playTone = (freq: number, start: number, duration: number) => {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
+          osc.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + start + duration);
+          
+          gain.gain.setValueAtTime(0, audioCtx.currentTime + start);
+          gain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + start + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + start + duration);
+          
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          
+          osc.start(audioCtx.currentTime + start);
+          osc.stop(audioCtx.currentTime + start + duration);
+        } catch (e) {
+          console.error("Error playing tone:", e);
+        }
+      };
 
-    // Beautiful "magical" chime
-    playTone(440, 0, 0.6);
-    playTone(659.25, 0.1, 0.6);
-    playTone(880, 0.2, 0.6);
+      // Beautiful "magical" chime
+      playTone(440, 0, 0.6);
+      playTone(659.25, 0.1, 0.6);
+      playTone(880, 0.2, 0.6);
+
+      // Close context after playing
+      setTimeout(() => {
+        if (audioCtx.state !== 'closed') {
+          audioCtx.close().catch(() => {});
+        }
+      }, 1000);
+    } catch (e) {
+      console.error("Error in playStartSound:", e);
+    }
   };
 
   const toggleConnection = () => {
@@ -160,7 +190,6 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
       disconnect();
     } else {
       if (isNight) return; // Prevent connection during sleep
-      playStartSound();
       connect(selectedVoice);
     }
   };
@@ -176,11 +205,11 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
         className="fixed inset-0 pointer-events-none z-0"
       />
 
-      {/* Back Button - Standardized */}
-      <div className="absolute top-4 left-4 z-[100]">
+      {/* Back Button and Controls - Standardized at top */}
+      <div className="absolute top-4 left-4 right-4 z-[100] flex items-center justify-between">
         <button
           onClick={() => {
-            if (isConnected) disconnect();
+            disconnect();
             onBack();
           }}
           className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-xl text-white/50 hover:text-white hover:bg-white/20 transition-all border border-white/20 shadow-xl"
@@ -188,9 +217,36 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            disabled={isConnected}
+            className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-xl text-white/50 hover:text-white hover:bg-white/20 transition-all border border-white/20 shadow-xl disabled:opacity-0"
+          >
+            <Settings2 className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center w-full relative">
+        <AnimatePresence>
+          {weatherData && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute top-0 z-[40] w-full max-w-xs"
+            >
+              <WeatherWidget 
+                city={weatherData.city} 
+                country={weatherData.country} 
+                condition={weatherData.condition} 
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence>
           {showSettings && !isConnected && (
             <motion.div
@@ -234,14 +290,14 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
           {/* Main Character Body/Head Container */}
           <motion.div 
             animate={{
-              y: isSpeaking ? [0, -35, 5, -25, 0] : [0, -15, 0],
-              rotate: isSpeaking ? [-2, 2, -1, 3, 0] : [0, 0, 0],
-              scale: isSpeaking ? [1, 1.08, 1] : 1,
+              y: isSpeaking ? [0, -15, 5, -10, 0] : [0, -10, 0],
+              rotate: isSpeaking ? [-1, 1, -0.5, 1.5, 0] : [0, 0, 0],
+              scale: isSpeaking ? [1, 1.04, 1] : 1,
             }}
             transition={{ 
-              y: { duration: 5, repeat: Infinity, ease: "easeInOut" },
-              rotate: { duration: 6, repeat: Infinity, ease: "easeInOut" },
-              scale: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+              y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+              rotate: { duration: 5, repeat: Infinity, ease: "easeInOut" },
+              scale: { duration: 3, repeat: Infinity, ease: "easeInOut" }
             }}
             className="relative z-10 flex flex-col items-center justify-center"
           >
@@ -260,60 +316,6 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
               }}
               className="absolute w-80 h-80 blur-[100px] pointer-events-none rounded-full will-change-[opacity,transform]"
             />
-            {/* Hands - Left */}
-            <AnimatePresence>
-              {isSpeaking && gestureType !== "none" && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5, x: 0, rotate: 0 }}
-                  animate={{
-                    opacity: 1,
-                    scale: gestureType === "singing" ? 1.2 : 1,
-                    x: deviceType === "tv" ? -180 : -140,
-                    y: gestureType === "singing" ? [0, -60, 20, -40, 0] : [0, -30, 10, -20, 0],
-                    rotate: gestureType === "singing" ? [-40, -80, -20, -60, -40] : [-20, -45, -15, -35, -20],
-                  }}
-                  exit={{ opacity: 0, scale: 0.5, x: 0 }}
-                  transition={{ 
-                    opacity: { duration: 0.5 },
-                    scale: { duration: 0.5 },
-                    y: { duration: gestureType === "singing" ? 3 : 5, repeat: Infinity, ease: "easeInOut" },
-                    rotate: { duration: gestureType === "singing" ? 2.5 : 4, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                  className={cn(
-                    "absolute bg-gradient-to-b from-cyan-400/60 to-cyan-600/10 border border-cyan-300/60 rounded-full blur-[0.5px] shadow-[0_0_40px_rgba(6,182,212,0.6)]",
-                    deviceType === "tv" ? "w-16 h-28" : "w-12 h-20"
-                  )}
-                />
-              )}
-            </AnimatePresence>
-
-            {/* Hands - Right */}
-            <AnimatePresence>
-              {isSpeaking && gestureType !== "none" && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5, x: 0, rotate: 0 }}
-                  animate={{
-                    opacity: 1,
-                    scale: gestureType === "singing" ? 1.2 : 1,
-                    x: deviceType === "tv" ? 180 : 140,
-                    y: gestureType === "singing" ? [0, -50, 30, -30, 0] : [0, -25, 15, -15, 0],
-                    rotate: gestureType === "singing" ? [40, 70, 10, 50, 40] : [20, 40, 10, 30, 20],
-                  }}
-                  exit={{ opacity: 0, scale: 0.5, x: 0 }}
-                  transition={{ 
-                    opacity: { duration: 0.5 },
-                    scale: { duration: 0.5 },
-                    y: { duration: gestureType === "singing" ? 3.2 : 5.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 },
-                    rotate: { duration: gestureType === "singing" ? 2.8 : 4.5, repeat: Infinity, ease: "easeInOut", delay: 0.1 }
-                  }}
-                  className={cn(
-                    "absolute bg-gradient-to-b from-cyan-400/60 to-cyan-600/10 border border-cyan-300/60 rounded-full blur-[0.5px] shadow-[0_0_40px_rgba(6,182,212,0.6)]",
-                    deviceType === "tv" ? "w-16 h-28" : "w-12 h-20"
-                  )}
-                />
-              )}
-            </AnimatePresence>
-
             {/* Avatar Content: Alternates between Face and Glowing Circle */}
             <div className="relative z-10 flex flex-col items-center justify-center">
               <AnimatePresence mode="wait">
@@ -331,7 +333,7 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
                     </div>
                     <div className="text-[10px] text-white/20 font-black tracking-widest uppercase mt-4">Sleeping...</div>
                   </motion.div>
-                ) : avatarState === "face" ? (
+                ) : (
                   <motion.div
                     key="face"
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -349,8 +351,8 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
                           boxShadow: isConnected ? "0 0 30px #00d2ff" : "0 0 10px #004488"
                         }}
                         transition={{ 
-                          scaleY: { duration: 0.25, repeat: isSpeaking ? Infinity : 0, repeatDelay: 4 },
-                          backgroundColor: { duration: 0.5 }
+                          scaleY: { duration: 0.2, repeat: isSpeaking ? Infinity : 0, repeatDelay: 3 + Math.random() * 2 },
+                          backgroundColor: { duration: 0.3 }
                         }}
                         className={cn(
                           "rounded-full will-change-transform",
@@ -366,8 +368,8 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
                           boxShadow: isConnected ? "0 0 30px #00d2ff" : "0 0 10px #004488"
                         }}
                         transition={{ 
-                          scaleY: { duration: 0.25, repeat: isSpeaking ? Infinity : 0, repeatDelay: 4.2 },
-                          backgroundColor: { duration: 0.5 }
+                          scaleY: { duration: 0.2, repeat: isSpeaking ? Infinity : 0, repeatDelay: 3.2 + Math.random() * 2 },
+                          backgroundColor: { duration: 0.3 }
                         }}
                         className={cn(
                           "rounded-full will-change-transform",
@@ -376,34 +378,35 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
                       />
                     </div>
                     
-                    {/* Mouth */}
+                    {/* Mouth - Highly synchronized with volume and smoother transitions */}
                     <motion.div 
                       animate={{ 
-                        width: isConnected ? (isSpeaking ? (deviceType === "tv" ? [120, 160, 120] : [60, 80, 60]) : (deviceType === "tv" ? 120 : 60)) : 30,
-                        height: isConnected ? (isSpeaking ? (deviceType === "tv" ? [14, 30, 14] : [10, 20, 10]) : (deviceType === "tv" ? 14 : 10)) : 2,
-                        opacity: isConnected ? 0.8 : 0.3,
+                        width: isConnected 
+                          ? (isSpeaking 
+                              ? (deviceType === "tv" ? 120 + volume * 80 : 60 + volume * 40) 
+                              : (deviceType === "tv" ? 120 : 60)) 
+                          : 30,
+                        height: isConnected 
+                          ? (isSpeaking 
+                              ? (deviceType === "tv" ? 14 + volume * 60 : 10 + volume * 35) 
+                              : (deviceType === "tv" ? 14 : 10)) 
+                          : 2,
+                        borderRadius: isSpeaking ? "35%" : "50%",
+                        opacity: isConnected ? 0.9 + volume * 0.1 : 0.3,
                         backgroundColor: isConnected ? "#00d2ff" : "#004488",
-                        boxShadow: isConnected ? "0 0 30px #00d2ff" : "0 0 10px #004488"
+                        boxShadow: isConnected 
+                          ? `0 0 ${25 + volume * 50}px #00d2ff` 
+                          : "0 0 10px #004488"
                       }}
-                      transition={{ duration: 0.2 }}
-                      className="rounded-full will-change-[width,height,transform]"
+                      transition={{ 
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 25,
+                        mass: 0.4
+                      }}
+                      className="will-change-[width,height,transform,box-shadow,border-radius]"
                     />
                   </motion.div>
-                ) : (
-                  <motion.div
-                    key="circle"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ 
-                      opacity: 1, 
-                      scale: isSpeaking ? [1, 1.2, 1] : 1,
-                      boxShadow: isSpeaking ? "0 0 60px #00d2ff" : "0 0 30px #00d2ff"
-                    }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    className={cn(
-                      "rounded-full border-4 border-[#00d2ff] bg-transparent",
-                      deviceType === "tv" ? "w-48 h-48" : "w-32 h-32"
-                    )}
-                  />
                 )}
               </AnimatePresence>
             </div>
@@ -463,8 +466,14 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
                       عذراً، حدث خطأ في الاتصال
                     </p>
                     <p className="opacity-80 leading-relaxed">
-                      {error.toLowerCase().includes("quota") 
-                        ? "لقد تجاوزت حد الاستخدام المجاني المسموح به حالياً. يرجى المحاولة مرة أخرى بعد قليل أو التحقق من مفتاح API الخاص بك." 
+                      {error === "API_KEY_MISSING" 
+                        ? "مفتاح API مفقود. يرجى التأكد من إعداد المفتاح بشكل صحيح." 
+                        : error === "MICROPHONE_NOT_SUPPORTED"
+                        ? "الميكروفون غير مدعوم في هذا المتصفح أو الجهاز."
+                        : error === "LIVE_API_NOT_AVAILABLE"
+                        ? "خدمة المحادثة المباشرة غير متوفرة حالياً."
+                        : error.toLowerCase().includes("quota") 
+                        ? "لقد تجاوزت حد الاستخدام المجاني المسموح به حالياً. يرجى المحاولة مرة أخرى بعد قليل." 
                         : "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى."}
                     </p>
                   </motion.div>
@@ -475,20 +484,26 @@ export function VoiceInterface({ onBack, deviceType = "desktop" }: VoiceInterfac
         </div>
       </div>
 
-      <div className="flex items-center justify-center space-x-12 w-full pb-12 relative z-10">
-        <button
-          onClick={toggleMute}
-          disabled={!isConnected}
-          className={cn(
-            "p-6 rounded-full transition-all border disabled:opacity-0 disabled:pointer-events-none",
-            isMuted 
-              ? "bg-rose-500 text-white border-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.5)]" 
-              : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+      <div className="flex items-center justify-center w-full pb-12 relative z-10">
+        <AnimatePresence>
+          {isConnected && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              onClick={toggleMute}
+              className={cn(
+                "p-3 rounded-full transition-all border shadow-lg flex items-center justify-center",
+                isMuted 
+                  ? "bg-rose-500 text-white border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.4)]" 
+                  : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+              )}
+              title={isMuted ? "إلغاء الكتم" : "كتم الميكروفون"}
+            >
+              {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </motion.button>
           )}
-          title={isMuted ? "إلغاء الكتم" : "كتم الميكروفون"}
-        >
-          {isMuted ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
-        </button>
+        </AnimatePresence>
       </div>
     </div>
   );

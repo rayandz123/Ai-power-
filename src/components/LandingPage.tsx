@@ -113,7 +113,7 @@ export function LandingPage({ onStart, onInstall }: LandingPageProps) {
               className="w-full sm:w-auto px-12 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-3xl font-bold text-2xl hover:scale-105 transition-all flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.5)]"
             >
               <Download className="mr-4 w-8 h-8" />
-              تثبيت التطبيق الآن
+              تحميل ملف APK (تثبيت مباشر)
             </button>
 
             <button
@@ -157,7 +157,7 @@ export function LandingPage({ onStart, onInstall }: LandingPageProps) {
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[100px] rounded-full" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-500/5 blur-[100px] rounded-full" />
             
-            <h2 className="text-4xl md:text-5xl font-bold text-center mb-20 tracking-tight">كيفية التثبيت (APK البديل)</h2>
+            <h2 className="text-4xl md:text-5xl font-bold text-center mb-20 tracking-tight">كيفية التحميل (ملف APK)</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-16 relative z-10">
               <div className="space-y-8">
@@ -165,20 +165,20 @@ export function LandingPage({ onStart, onInstall }: LandingPageProps) {
                   <div className="w-16 h-16 rounded-[2rem] bg-white/5 flex items-center justify-center border border-white/10 shadow-xl">
                     <Smartphone className="w-8 h-8 text-indigo-400" />
                   </div>
-                  <h3 className="text-2xl font-bold">على الهاتف (Android/iOS)</h3>
+                  <h3 className="text-2xl font-bold">على الأندرويد (APK)</h3>
                 </div>
                 <ul className="space-y-6 text-white/60 list-none">
                   <li className="flex items-start">
                     <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">1</span>
-                    <p className="text-lg">افتح الموقع في متصفح Chrome أو Safari.</p>
+                    <p className="text-lg">اضغط على زر "تحميل ملف APK" في الأعلى.</p>
                   </li>
                   <li className="flex items-start">
                     <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">2</span>
-                    <p className="text-lg">اضغط على زر "تثبيت الآن" في الأعلى.</p>
+                    <p className="text-lg">وافق على تحميل الملف من المتصفح.</p>
                   </li>
                   <li className="flex items-start">
                     <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">3</span>
-                    <p className="text-lg">سيظهر التطبيق فوراً في قائمة تطبيقاتك.</p>
+                    <p className="text-lg">افتح الملف وقم بتثبيته مباشرة على هاتفك.</p>
                   </li>
                 </ul>
               </div>
