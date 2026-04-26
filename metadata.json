@@ -1,7 +1,9 @@
 {
-  "name": "Ai chat power",
-  "description": "An AI chat application developed by 'ai power' with live voice and text capabilities, supporting all languages including Algerian Darija and Kabyle dialects. Features a colorful changing cat avatar and dynamic themes.",
+  "name": "Ai Chat Power",
+  "description": "نظام الذكاء الاصطناعي الأكثر تطوراً في العالم، يرى ويسمع ويساعد في كل شيء.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "camera",
+    "geolocation"
   ]
 }

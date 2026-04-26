@@ -4,16 +4,48 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Ai chat power</title>
+    
+    <!-- Open Graph / Link Sharing Tags to prevent Google logos -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ai chat power - مساعدك الشخصي" />
+    <meta property="og:description" content="أقوى رفيق ذكي لك ولعائلتك" />
+    <meta property="og:image" content="https://img.icons8.com/nolan/512/bot.png" />
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Ai chat power" />
+    <meta property="twitter:description" content="أقوى رفيق ذكي لك ولعائلتك" />
+    <meta property="twitter:image" content="https://img.icons8.com/nolan/512/bot.png" />
+
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0a0a0c" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Ai chat power" />
-    <link rel="apple-touch-icon" href="https://picsum.photos/seed/ai-chat/192/192" />
+    <link rel="apple-touch-icon" href="https://img.icons8.com/nolan/192/bot.png" />
+    <link rel="icon" type="image/png" href="https://img.icons8.com/nolan/32/bot.png" />
   </head>
-  <body>
+  <body style="background-color: #050507;">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Security Shield: Prevent casual inspection -->
+    <script>
+      // Disable right-click context menu
+      document.addEventListener('contextmenu', event => event.preventDefault());
+      
+      // Disable common developer tools keyboard shortcuts
+      document.onkeydown = function(e) {
+        // Disable F12
+        if(e.keyCode == 123) { return false; }
+        // Disable Ctrl+Shift+I (Inspect)
+        if(e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) { return false; }
+        // Disable Ctrl+Shift+C (Inspect Element)
+        if(e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) { return false; }
+        // Disable Ctrl+Shift+J (Console)
+        if(e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) { return false; }
+        // Disable Ctrl+U (View Source)
+        if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) { return false; }
+      }
+    </script>
   </body>
 </html>
 

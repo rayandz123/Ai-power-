@@ -1,238 +1,198 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
+import { MessageSquare, Mic, Sparkles, Download, X, Zap, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import { MessageSquare, Mic, Download, X, ArrowLeft, Smartphone, Tv, Monitor, Sparkles } from "lucide-react";
-import { ChatInterface } from "./components/ChatInterface";
-import { VoiceInterface } from "./components/VoiceInterface";
-import { LandingPage } from "./components/LandingPage";
 import { useLiveAPI } from "./lib/useLiveAPI";
+import { cn } from "./lib/utils";
+
+// Lazy load components for lightning-fast initial mount
+const ChatInterface = lazy(() => import("./components/ChatInterface").then(m => ({ default: m.ChatInterface })));
+const VoiceInterface = lazy(() => import("./components/VoiceInterface").then(m => ({ default: m.VoiceInterface })));
+const LandingPage = lazy(() => import("./components/LandingPage").then(m => ({ default: m.LandingPage })));
+
+const APP_VERSION = "2.6.0"; // Increment for optimization update
+
+function LoadingFallback() {
+  return (
+    <div className="fixed inset-0 bg-[#0d0d12] flex items-center justify-center z-[1000]">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="flex flex-col items-center"
+      >
+        <div className="relative mb-4">
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.4, 1],
+              opacity: [0.2, 0.4, 0.2] 
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -inset-12 bg-cyan-500/20 blur-[60px] rounded-full"
+          />
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="relative z-10"
+          >
+            <img src="https://img.icons8.com/nolan/512/bot.png" alt="Bot Logo" className="w-24 h-24 drop-shadow-[0_0_30px_rgba(34,211,238,0.4)]" />
+          </motion.div>
+        </div>
+        <p className="text-[10px] text-white/30 font-bold uppercase tracking-[0.5em] mt-2 mb-6">Ai Chat Power</p>
+        <div className="flex gap-2 align-center">
+            {[0, 1, 2].map((i) => (
+                <motion.div
+                    key={i}
+                    animate={{ opacity: [0.2, 1, 0.2] }}
+                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
+                    className="w-1 h-1 rounded-full bg-cyan-400"
+                />
+            ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 function AppContent() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const liveAPI = useLiveAPI();
-  const { disconnect } = liveAPI;
   const [mode, setMode] = useState<"text" | "voice">("text");
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [deviceType, setDeviceType] = useState<"mobile" | "tv" | "desktop">("desktop");
+  const [showLanding, setShowLanding] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("hasVisited");
+  });
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showUpdateToast, setShowUpdateToast] = useState(false);
+  const navigate = useNavigate();
+  const liveAPI = useLiveAPI();
+  const { isConnected } = liveAPI;
 
   useEffect(() => {
-    // Splash screen timer
-    const timer = setTimeout(() => setIsInitializing(false), 2500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
+    // Detect device once for performance
     const detectDevice = () => {
-      const ua = navigator.userAgent.toLowerCase();
-      const isTV = ua.includes("tv") || ua.includes("tizen") || ua.includes("webos") || ua.includes("smart-tv") || ua.includes("googletv") || ua.includes("appletv");
-      const isMobile = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm/i.test(ua);
+      const ua = navigator.userAgent || "";
+      const width = document.documentElement.clientWidth;
+      const height = document.documentElement.clientHeight;
+      
+      const isTV = /SmartTV|GoogleTV|AppleTV|HbbTV|LG|Samsung|Tizen|Viera|Sony|Vizio|AFTB|AFTN|FireTV|WebOS|Roku|LargeScreen/i.test(ua) ||
+                   ( /Android/i.test(ua) && /TV/i.test(ua) ) || 
+                   ( width >= 1920 && width / height > 1.7 && /Android/i.test(ua) );
 
-      if (isTV) setDeviceType("tv");
-      else if (isMobile) setDeviceType("mobile");
-      else setDeviceType("desktop");
-    };
-
-    detectDevice();
-    window.addEventListener("resize", detectDevice);
-    return () => window.removeEventListener("resize", detectDevice);
-  }, []);
-
-  useEffect(() => {
-    // Check if app is running in standalone mode (installed)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    
-    // Auto-redirect to app if installed and on landing page
-    if (isStandalone && location.pathname === "/") {
-      navigate("/app");
-    }
-
-    const handler = (e: any) => {
-      if (!isStandalone) {
-        e.preventDefault();
-        setDeferredPrompt(e);
-        setShowInstallBanner(true);
+      if (isTV) {
+        setDeviceType("tv");
+      } else if (width < 768 || /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
+        setDeviceType("mobile");
+      } else {
+        setDeviceType("desktop");
       }
     };
 
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    detectDevice();
+    
+    // Throttled resize listener
+    let resizeTimer: any;
+    const handleResize = () => {
+       if (!resizeTimer) {
+          resizeTimer = setTimeout(() => {
+             detectDevice();
+             resizeTimer = null;
+          }, 200);
+       }
+    };
+    window.addEventListener("resize", handleResize, { passive: true });
+
+    // API KEY Auto-Sync (URL Params are fast)
+    const params = new URLSearchParams(window.location.search);
+    const syncKey = params.get('sync_key');
+    if (syncKey) {
+      localStorage.setItem("personal_gemini_key", syncKey);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setShowUpdateToast(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      if (resizeTimer) clearTimeout(resizeTimer);
+    };
   }, []);
 
-  useEffect(() => {
-    // Global cleanup: if we are on landing page, ensure everything is off
-    if (location.pathname === "/") {
-      disconnect();
-    }
-  }, [location.pathname, disconnect]);
-
   const handleInstall = async () => {
-    if (!deferredPrompt) {
-      alert("جاري تجهيز ملف APK للتحميل... يرجى التأكد من استخدام متصفح Chrome أو Safari والضغط على 'إضافة إلى الشاشة الرئيسية' إذا لم يبدأ التحميل تلقائياً.");
-      return;
-    }
+    if (!deferredPrompt) return false;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
+    if (outcome === 'accepted') {
       setDeferredPrompt(null);
-      setShowInstallBanner(false);
+      return true;
     }
+    return false;
   };
 
-  if (isInitializing) {
+  if (showLanding) {
     return (
-      <div className="fixed inset-0 bg-[#050507] flex items-center justify-center z-[1000]">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className="flex flex-col items-center"
-        >
-          <motion.div
-            animate={{ 
-              rotate: [0, 90, 180, 270, 360],
-              boxShadow: ["0 0 20px #22d3ee", "0 0 60px #8b5cf6", "0 0 20px #22d3ee"]
-            }}
-            transition={{ rotate: { duration: 12, repeat: Infinity, ease: "linear" }, boxShadow: { duration: 2, repeat: Infinity } }}
-            className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center mb-6 border border-white/20 relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-white/10 animate-pulse" />
-            <Sparkles className="w-12 h-12 text-white relative z-10" />
-          </motion.div>
-          <motion.h2 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="text-2xl font-black tracking-[0.4em] text-white uppercase"
-          >
-            AI CHAT POWER
-          </motion.h2>
-          <div className="mt-4 flex gap-1">
-            {[0, 1, 2].map(i => (
-              <motion.div
-                key={i}
-                animate={{ opacity: [0.3, 1, 0.3] }}
-                transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                className="w-1.5 h-1.5 bg-cyan-500 rounded-full"
-              />
-            ))}
-          </div>
-        </motion.div>
-      </div>
+      <Suspense fallback={<LoadingFallback />}>
+        <LandingPage onStart={() => {
+          localStorage.setItem("hasVisited", "true");
+          setShowLanding(false);
+        }} onInstall={handleInstall} />
+      </Suspense>
     );
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage onStart={() => navigate("/app")} onInstall={handleInstall} />} />
-      <Route path="/app" element={
-        <div className="flex flex-col h-screen bg-[#050507] text-white overflow-hidden font-sans selection:bg-indigo-500/30">
-          {/* Background Effects */}
-          <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/10 blur-[120px] animate-pulse" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-rose-600/10 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] brightness-100 contrast-150" />
-          </div>
+    <div className="min-h-[100dvh] w-full bg-[#0a0a0f] flex items-center justify-center overflow-x-hidden relative selection:bg-cyan-500/30">
+      <div className="w-full h-full max-w-md sm:h-[90vh] sm:max-h-[850px] sm:rounded-[2.5rem] sm:border sm:border-white/5 bg-[#0c0c14] relative overflow-hidden shadow-2xl flex flex-col">
+        <Routes>
+          <Route path="/" element={<Navigate to="/app" replace />} />
+          <Route path="/app" element={
+            <div className="flex flex-col flex-1 text-white overflow-hidden font-sans relative">
+              {/* Optimized Background Static Gradients */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-600/[0.05] blur-[120px] will-change-transform" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-cyan-600/[0.05] blur-[120px] will-change-transform" />
+              </div>
 
-          {/* PWA Install Banner */}
-          <AnimatePresence>
-            {showInstallBanner && !window.matchMedia('(display-mode: standalone)').matches && (
-              <motion.div
-                initial={{ y: -100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -100, opacity: 0 }}
-                className="fixed top-6 left-6 right-6 z-[100] bg-white/10 backdrop-blur-3xl border border-white/20 p-6 rounded-[2rem] flex items-center justify-between shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-              >
-                <div className="flex items-center space-x-5">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-rose-500 flex items-center justify-center shadow-lg relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform" />
-                    <Download className="w-7 h-7 text-white relative z-10" />
-                  </div>
-                  <div>
-                    <p className="text-white font-bold text-lg tracking-tight">ثبت التطبيق الآن</p>
-                    <p className="text-white/50 text-sm">استمتع بتجربة كاملة وسريعة بدون متصفح</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={handleInstall}
-                    className="bg-white text-black px-6 py-3 rounded-2xl font-bold text-sm hover:scale-105 transition-all shadow-xl active:scale-95"
-                  >
-                    تثبيت
-                  </button>
-                  <button
-                    onClick={() => setShowInstallBanner(false)}
-                    className="p-3 text-white/30 hover:text-white hover:bg-white/5 rounded-xl transition-all"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Header - Fixed and Untouchable background */}
-          <header className="fixed top-0 left-0 right-0 pt-4 pb-4 px-6 flex flex-col items-center justify-center z-[200] bg-gradient-to-b from-[#050507] via-[#050507]/95 to-transparent backdrop-blur-sm pointer-events-none">
-            {/* Mode Toggle - Interactive */}
-            <div className="w-full max-w-[280px] bg-white/5 backdrop-blur-3xl p-1 rounded-[2rem] flex border border-white/10 relative z-20 shadow-[0_8px_30px_rgba(0,0,0,0.3)] pointer-events-auto">
-              <button 
-                onClick={() => setMode("text")}
-                className={`flex-1 flex items-center justify-center py-2.5 rounded-[1.5rem] transition-all duration-500 ${mode === "text" ? "bg-white/10 text-white shadow-lg font-bold" : "text-white/20 hover:text-white/40"}`}
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                <span className="text-[10px] tracking-[0.15em] uppercase">Text Chat</span>
-              </button>
-              <button 
-                onClick={() => setMode("voice")}
-                className={`flex-1 flex items-center justify-center py-2.5 rounded-[1.5rem] transition-all duration-500 ${mode === "voice" ? "bg-white/10 text-white shadow-lg font-bold" : "text-white/20 hover:text-white/40"}`}
-              >
-                <Mic className="w-4 h-4 mr-2" />
-                <span className="text-[10px] tracking-[0.15em] uppercase">Voice AI</span>
-              </button>
+              <main className="flex-1 relative w-full h-full overflow-hidden z-10">
+                <Suspense fallback={<LoadingFallback />}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={mode}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15, ease: "linear" }}
+                      className="absolute inset-0"
+                    >
+                      {mode === "text" ? (
+                        <ChatInterface 
+                          onSwitchToVoice={() => setMode("voice")} 
+                          onBack={() => setMode("voice")} 
+                          liveAPI={liveAPI}
+                        />
+                      ) : (
+                        <VoiceInterface 
+                          onBack={() => setMode("text")} 
+                          deviceType={deviceType} 
+                          liveAPI={liveAPI}
+                        />
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </Suspense>
+              </main>
             </div>
-          </header>
-
-          {/* Main Content Area */}
-          <main className="flex-1 relative w-full h-full overflow-hidden z-10 pt-20">
-            <AnimatePresence mode="wait">
-              {mode === "text" ? (
-                <motion.div
-                  key="text"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="absolute inset-0"
-                >
-                  <ChatInterface 
-                    onSwitchToVoice={() => setMode("voice")} 
-                    onBack={() => navigate("/")} 
-                    liveAPI={liveAPI}
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="voice"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                  className="absolute inset-0"
-                >
-                  <VoiceInterface 
-                    onBack={() => setMode("text")} 
-                    deviceType={deviceType} 
-                    liveAPI={liveAPI}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </main>
-        </div>
-      } />
-    </Routes>
+          } />
+          <Route path="*" element={<Navigate to="/app" replace />} />
+        </Routes>
+      </div>
+    </div>
   );
 }
 

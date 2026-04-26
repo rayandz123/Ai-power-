@@ -1,252 +1,315 @@
-import { motion } from "motion/react";
-import { Download, Smartphone, Tv, Shield, Zap, Globe, ArrowRight, Star, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Download, Smartphone, Tv, Shield, Zap, Globe, ArrowRight, Star, Sparkles, Monitor, Link, Copy, Check, Chrome, MoreVertical, Share } from "lucide-react";
+import { useState } from "react";
+import { cn } from "../lib/utils";
 
 interface LandingPageProps {
   onStart: () => void;
-  onInstall: () => void;
+  onInstall: () => Promise<boolean>;
 }
 
 export function LandingPage({ onStart, onInstall }: LandingPageProps) {
+  const [copied, setCopied] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [showTVGuide, setShowTVGuide] = useState(false);
+  const [showPCGuide, setShowPCGuide] = useState(false);
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "ais-chat-power.run";
+  const shortDomain = siteUrl.replace(/^https?:\/\//, '');
+  const isWindows = typeof window !== "undefined" && navigator.userAgent.includes("Windows");
+  const isMobile = typeof window !== "undefined" && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  const handlePCInstall = async () => {
+    if (isInstalling) return;
+    setIsInstalling(true);
+    
+    try {
+      const success = await onInstall(); 
+      if (!success) {
+         setShowPCGuide(true);
+      }
+    } catch (e) {
+      setShowPCGuide(true);
+    }
+    setTimeout(() => setIsInstalling(false), 1500);
+  };
+
+  const handleMobileInstall = async () => {
+    if (isInstalling) return;
+    setIsInstalling(true);
+
+    try {
+      const success = await onInstall(); 
+      if (!success) {
+        setShowInstallGuide(true);
+      }
+    } catch (error) {
+      console.error("Install logic failed", error);
+    }
+    setTimeout(() => setIsInstalling(false), 1500);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(siteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-white selection:bg-indigo-500/30">
-      {/* Hero Section */}
+    <div className="min-h-screen bg-[#0a0a0c] text-white selection:bg-indigo-500/30 overflow-x-hidden">
+      <AnimatePresence>
+        {showInstallGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/80"
+          >
+            <div className="bg-[#111118] border border-white/10 rounded-[2rem] p-8 max-w-sm w-full text-center relative shadow-2xl">
+              <h3 className="text-2xl font-bold mb-4 whitespace-nowrap">إضافة للشاشة الرئيسية</h3>
+              <p className="text-white/70 mb-6 leading-relaxed">
+                لتثبيت هذا النظام <strong className="text-white">(App)</strong> في هاتفك فوراً:
+              </p>
+              
+              <div className="space-y-4 text-right bg-white/5 p-4 rounded-xl border border-white/10 mb-6" dir="rtl">
+                <div className="flex items-start gap-4">
+                  <MoreVertical className="w-6 h-6 text-indigo-400 shrink-0" />
+                  <p className="text-sm">في <strong className="text-white">أندرويد</strong>: اضغط على خيارات المتصفح (⋮) ثم اختر <strong className="text-indigo-400">إضافة للشاشة الرئيسية</strong>.</p>
+                </div>
+                <div className="h-px bg-white/10 w-full" />
+                <div className="flex items-start gap-4">
+                  <Share className="w-6 h-6 text-emerald-400 shrink-0" />
+                  <p className="text-sm">في <strong className="text-white">آيفون</strong>: اضغط على زر المشاركة تحت ثم اختر <strong className="text-emerald-400">Add to Home Screen</strong>.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                حسناً، فهمت
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {showPCGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/80"
+          >
+            <div className="bg-[#111118] border border-white/10 rounded-[2rem] p-8 max-w-sm w-full text-center relative shadow-2xl">
+              <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/30">
+                <Monitor className="w-8 h-8 text-indigo-400" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 whitespace-nowrap">تثبيت البرنامج</h3>
+              <p className="text-white/70 mb-6 leading-relaxed">
+                لتثبيت النظام كبرنامج مستقل على جهاز الكمبيوتر:
+              </p>
+              
+              <div className="space-y-4 text-right bg-white/5 p-4 rounded-xl border border-white/10 mb-6" dir="rtl">
+                <div className="flex items-start gap-4">
+                  <Chrome className="w-6 h-6 text-blue-400 shrink-0" />
+                  <p className="text-sm">
+                    تأكد أنك تستخدم متصفح <strong className="text-white">Chrome</strong> أو <strong className="text-white">Edge</strong>، ثم انقر على أيقونة التثبيت الموجودة في شريط العنوان بالأعلى لتنزيله.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowPCGuide(false)}
+                className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20"
+              >
+                تم
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {showTVGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/90"
+          >
+            <div className="bg-[#0a0a0c] border border-white/10 rounded-[2rem] p-8 max-w-md w-full text-center relative shadow-2xl">
+              <div className="w-20 h-20 bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-cyan-500/30">
+                <Tv className="w-10 h-10 text-cyan-400" />
+              </div>
+              <h3 className="text-3xl font-black mb-4">للشاشات الذكية</h3>
+              <p className="text-white/60 mb-6 text-sm leading-relaxed">
+                لكي يعمل النظام كبرنامج أساسي وكامل الشاشة وبدون أخطاء على التلفاز (Android TV / Fire TV):
+              </p>
+              
+              <div className="space-y-4 text-right bg-white/5 p-5 rounded-2xl border border-white/10 mb-8" dir="rtl">
+                <p className="text-sm border-b border-white/5 pb-3">
+                  <strong className="text-cyan-400 mr-2">1.</strong> قم بتحميل برنامج <strong>Downloader</strong> من متجر التلفاز الرسمي.
+                </p>
+                <div className="pt-2">
+                  <p className="text-sm">
+                    <strong className="text-cyan-400 mr-2">2.</strong> افتح البرنامج وأدخل رابط موقعنا في شريط البحث للبدء مباشرة.
+                  </p>
+                </div>
+                <p className="text-sm border-t border-white/5 pt-3 mt-3 text-white/50">
+                  <strong className="text-cyan-400 mr-2">3.</strong> اضغط على Go وتمتع بالتجربة!
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowTVGuide(false)}
+                  className="flex-1 py-4 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-colors"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <section className="relative pt-20 pb-32 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full z-0">
-          <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-600/10 blur-[120px] animate-pulse" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-rose-600/10 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
-          
-          {/* Floating particles */}
-          <motion.div 
-            animate={{ 
-              y: [0, -20, 0],
-              opacity: [0.2, 0.5, 0.2]
-            }}
-            transition={{ duration: 5, repeat: Infinity }}
-            className="absolute top-1/4 left-1/4 w-2 h-2 bg-white rounded-full blur-sm"
-          />
-          <motion.div 
-            animate={{ 
-              y: [0, 20, 0],
-              opacity: [0.1, 0.4, 0.1]
-            }}
-            transition={{ duration: 7, repeat: Infinity, delay: 1 }}
-            className="absolute top-1/2 right-1/3 w-3 h-3 bg-indigo-400 rounded-full blur-sm"
-          />
+          <div className={cn(
+            "absolute top-[-10%] left-[-10%] rounded-full bg-indigo-600/10 animate-pulse",
+            isMobile ? "w-[80%] h-[80%]" : "w-[60%] h-[60%]"
+          )} />
+          <div className={cn(
+            "absolute bottom-[-10%] right-[-10%] rounded-full bg-rose-600/10 animate-pulse",
+            isMobile ? "w-[80%] h-[80%]" : "w-[60%] h-[60%]"
+          )} style={{ animationDelay: '2s' }} />
         </div>
 
         <div className="container mx-auto px-6 relative z-10 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="inline-flex flex-col items-center mb-12"
           >
-            {/* Animated Logo - Enhanced */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ 
-                scale: 1, 
-                rotate: 0,
-                boxShadow: [
-                  "0 0 20px rgba(34, 211, 238, 0.3)",
-                  "0 0 60px rgba(139, 92, 246, 0.5)",
-                  "0 0 20px rgba(34, 211, 238, 0.3)"
-                ]
-              }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-              className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-cyan-400 via-indigo-500 to-purple-600 flex items-center justify-center mb-8 shadow-2xl relative group overflow-hidden border border-white/20"
+            <motion.div 
+               whileHover={{ scale: 1.1, rotate: 180 }}
+               transition={{ duration: 0.8, ease: "circOut" }}
+               className="w-24 h-24 rounded-3xl bg-white/5 flex items-center justify-center mb-8 shadow-2xl cursor-pointer"
             >
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-50" />
-              <motion.div
-                animate={{ 
-                  scale: [1, 1.1, 1],
-                  rotate: [0, 5, -5, 0]
-                }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <Sparkles className="w-12 h-12 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
-              </motion.div>
-              
-              {/* Spinning Ring */}
-              <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 border-2 border-dashed border-white/20 rounded-[2rem] scale-90"
-              />
+               <img src="https://img.icons8.com/nolan/512/bot.png" alt="Bot Logo" className="w-16 h-16 drop-shadow-lg" />
             </motion.div>
 
-            <div className="flex items-center space-x-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full backdrop-blur-md shadow-xl">
-              <div className="flex -space-x-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="w-6 h-6 rounded-full border-2 border-[#0a0a0c] bg-gradient-to-br from-indigo-500 to-rose-500" />
-                ))}
-              </div>
-              <span className="text-sm font-bold text-white/80 tracking-[0.3em] uppercase">المطور: ai power</span>
+            <div className="flex items-center space-x-3 bg-white/5 border border-white/10 px-6 py-2 rounded-full shadow-xl">
+              <span className="text-sm font-bold text-white/50 tracking-[0.3em] uppercase">Ai Chat Power</span>
             </div>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl font-black tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50"
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="text-5xl md:text-8xl font-black tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50"
           >
-            مرحباً بك في عالم الذكاء
+            المساعد الشخصي الذكي
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
             className="text-xl md:text-2xl text-white/60 max-w-2xl mx-auto mb-12 font-medium leading-tight"
           >
-            أنا رفيقك الذكي، رفيقي في كل خطوة. أتحدث معك، أسمعك، وأساعدك في كل ما تحتاجه بصوت هادئ وجميل.
+            نظام ذكاء اصطناعي متطور، يراك، يسمعك، ويشاركك الإبداع. صمم ليكون رفيقك التقني الأكثر حكمة وبصيرة في العالم.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col items-center justify-center gap-6"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="flex flex-col items-center justify-center gap-6 w-full max-w-4xl mx-auto"
           >
-            <button
-              onClick={onInstall}
-              className="w-full sm:w-auto px-12 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-3xl font-bold text-2xl hover:scale-105 transition-all flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.5)]"
-            >
-              <Download className="mr-4 w-8 h-8" />
-              تحميل ملف APK (تثبيت مباشر)
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+              {!isMobile && (
+                <button
+                  onClick={handlePCInstall}
+                  disabled={isInstalling}
+                  className={cn(
+                    "group relative flex-1 sm:max-w-max px-12 py-6 bg-white text-black rounded-[2rem] font-bold text-xl hover:scale-105 transition-all flex items-center justify-center shadow-2xl overflow-hidden active:scale-95",
+                    isInstalling && "opacity-90 scale-95"
+                  )}
+                >
+                  <span className="relative z-10">التحميل للكمبيوتر</span>
+                </button>
+              )}
+
+              {isMobile && (
+                <button
+                  onClick={handleMobileInstall}
+                  disabled={isInstalling}
+                  className={cn(
+                    "group relative flex-1 sm:max-w-max px-12 py-6 bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-[2rem] font-bold text-xl hover:scale-105 transition-all flex items-center justify-center shadow-xl shadow-indigo-500/20 active:scale-95",
+                    isInstalling && "opacity-90 scale-95"
+                  )}
+                >
+                  <span className="relative z-10 font-bold">تحميل للجوال</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => setShowTVGuide(true)}
+                className="group relative flex-1 sm:max-w-max px-12 py-6 bg-gradient-to-br from-[#0a0a0c] to-indigo-900 border border-white/20 text-white rounded-[2rem] font-bold text-xl hover:scale-105 transition-all flex items-center justify-center shadow-xl hover:shadow-indigo-500/20 active:scale-95"
+              >
+                <Tv className="w-5 h-5 ml-3 relative z-10 text-cyan-400" />
+                <span className="relative z-10 font-bold">التشغيل للتلفاز</span>
+              </button>
+            </div>
 
             <button
-              onClick={onStart}
-              className="group flex items-center gap-3 text-white/40 hover:text-white transition-all text-lg font-bold"
+               onClick={onStart}
+               className="group flex items-center gap-4 text-white/40 hover:text-white transition-all uppercase tracking-[0.5em] font-black text-[10px]"
             >
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              <span>أو الدخول مباشرة للتطبيق</span>
+               <span>أو أكمل في المتصفح</span>
+               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </motion.div>
         </div>
       </section>
 
-      {/* Features Grid */}
       <section className="py-24 bg-white/[0.02] border-y border-white/5">
         <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <FeatureCard
-              icon={<Zap className="w-8 h-8 text-indigo-400" />}
-              title="سرعة خارقة"
-              description="استجابة فورية كالبرق في المحادثات النصية والصوتية بدون أي تأخير."
-            />
-            <FeatureCard
-              icon={<Globe className="w-8 h-8 text-rose-400" />}
-              title="اللهجة"
-              description="يتكلم جميع اللغات واللهجات"
-            />
-            <FeatureCard
-              icon={<Smartphone className="w-8 h-8 text-emerald-400" />}
-              title="متعدد المنصات"
-              description="يعمل بكفاءة عالية على الهواتف الذكية، الحواسيب، وحتى أجهزة التلفاز."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Installation Guide */}
-      <section className="py-32">
-        <div className="container mx-auto px-6">
-          <div className="max-w-5xl mx-auto bg-gradient-to-br from-indigo-500/5 via-white/[0.02] to-rose-500/5 border border-white/10 rounded-[4rem] p-10 md:p-20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[100px] rounded-full" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-500/5 blur-[100px] rounded-full" />
-            
-            <h2 className="text-4xl md:text-5xl font-bold text-center mb-20 tracking-tight">كيفية التحميل (ملف APK)</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 relative z-10">
-              <div className="space-y-8">
-                <div className="flex items-center space-x-6">
-                  <div className="w-16 h-16 rounded-[2rem] bg-white/5 flex items-center justify-center border border-white/10 shadow-xl">
-                    <Smartphone className="w-8 h-8 text-indigo-400" />
-                  </div>
-                  <h3 className="text-2xl font-bold">على الأندرويد (APK)</h3>
-                </div>
-                <ul className="space-y-6 text-white/60 list-none">
-                  <li className="flex items-start">
-                    <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">1</span>
-                    <p className="text-lg">اضغط على زر "تحميل ملف APK" في الأعلى.</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">2</span>
-                    <p className="text-lg">وافق على تحميل الملف من المتصفح.</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">3</span>
-                    <p className="text-lg">افتح الملف وقم بتثبيته مباشرة على هاتفك.</p>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="space-y-8">
-                <div className="flex items-center space-x-6">
-                  <div className="w-16 h-16 rounded-[2rem] bg-white/5 flex items-center justify-center border border-white/10 shadow-xl">
-                    <Tv className="w-8 h-8 text-rose-400" />
-                  </div>
-                  <h3 className="text-2xl font-bold">على التلفاز (Android TV)</h3>
-                </div>
-                <ul className="space-y-6 text-white/60 list-none">
-                  <li className="flex items-start">
-                    <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">1</span>
-                    <p className="text-lg">افتح متصفح الويب على تلفازك.</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">2</span>
-                    <p className="text-lg">ادخل رابط الموقع: ais-chat-power.run</p>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-sm font-bold mr-4 shrink-0 border border-white/10">3</span>
-                    <p className="text-lg">اختر "إضافة إلى الشاشة الرئيسية" من إعدادات المتصفح.</p>
-                  </li>
-                </ul>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
+            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/10">
+              <Sparkles className="w-8 h-8 text-indigo-400 mx-auto mb-6" />
+              <h3 className="text-2xl font-bold mb-4">صناعة الفن</h3>
+              <p className="text-white/50">توليد صور وفيديوهات سينمائية بلمحة بصر.</p>
             </div>
-
-            <div className="mt-20 p-8 bg-white/5 rounded-3xl border border-white/10 text-center backdrop-blur-md">
-              <p className="text-white/70 text-lg">
-                <Shield className="inline-block w-6 h-6 mr-3 text-emerald-400" />
-                تطبيقنا آمن تماماً ولا يحتاج إلى صلاحيات مشبوهة.
-              </p>
+            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/10">
+              <Globe className="w-8 h-8 text-rose-400 mx-auto mb-6" />
+              <h3 className="text-2xl font-bold mb-4">عقل خارق</h3>
+              <p className="text-white/50">أفضل ذكاء في العالم لخدمتك في كل شيء.</p>
+            </div>
+            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/10 group hover:border-cyan-500/30 transition-all">
+              <Monitor className="w-8 h-8 text-cyan-400 mx-auto mb-6 group-hover:scale-110 transition-transform" />
+              <h3 className="text-2xl font-bold mb-4">الوضع العائم</h3>
+              <p className="text-white/50 text-sm">استدعي Ai Chat Power فوق جميع تطبيقاتك (PIP) ليكون رفيقك الدائم في كل لحظة.</p>
+            </div>
+            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/10">
+              <Shield className="w-8 h-8 text-emerald-400 mx-auto mb-6" />
+              <h3 className="text-2xl font-bold mb-4">أمان عالمي</h3>
+              <p className="text-white/50">تشفير تام لجميع محادثاتك وسجلاتك.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-20 border-t border-white/5 bg-black/50 backdrop-blur-3xl">
+      <footer className="py-20 border-t border-white/5 bg-black/50">
         <div className="container mx-auto px-6 flex flex-col items-center">
           <div className="flex items-center space-x-4 mb-8">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-rose-500" />
-            <span className="text-2xl font-black tracking-tighter">Super Chat AI</span>
+            <span className="text-2xl font-black tracking-tighter uppercase">Ai Chat Power Engine</span>
           </div>
-          <p className="text-white/30 text-sm mb-4">© 2026 Ai Chat Power - Developed by ai power</p>
-          <div className="flex space-x-6 text-white/20 text-xs uppercase tracking-widest font-bold">
-            <a href="https://github.com/rayanrami8884/AI-CHAT-POWER" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
-          </div>
+          <p className="text-white/30 text-sm mb-4">© 2026 Ai Chat Power</p>
         </div>
       </footer>
     </div>
-  );
-}
-
-function FeatureCard({ icon, title, description }: { icon: any, title: string, description: string }) {
-  return (
-    <motion.div 
-      whileHover={{ y: -10 }}
-      className="p-10 rounded-[2.5rem] bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/[0.07] transition-all group relative overflow-hidden"
-    >
-      <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all" />
-      <div className="mb-8 p-4 bg-white/5 rounded-2xl w-fit group-hover:scale-110 transition-transform">{icon}</div>
-      <h3 className="text-2xl font-bold mb-4 tracking-tight">{title}</h3>
-      <p className="text-white/50 leading-relaxed text-lg">{description}</p>
-    </motion.div>
   );
 }
